@@ -1,0 +1,17 @@
+herename: DilChat Android Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show project files
+        run: |
+          echo "Checking uploaded project files"
+          ls -la
+          find . -maxdepth 3 -type f | head -200
