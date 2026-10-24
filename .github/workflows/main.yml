@@ -1,44 +1,45 @@
-name: DilChat Android Build
+name: Build DilChat debug APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - name: Unpack project ZIP
+        run: |
+          mkdir -p work
+          unzip -q DilChat_Android_Project.zip -d work
+          ROOT=$(dirname "$(find work -name settings.gradle.kts | head -n 1)")
+          echo "PROJECT_DIR=$ROOT" >> "$GITHUB_ENV"
+          ls -la "$ROOT"
+
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Extract Android project
+      - name: Prepare Android SDK
         run: |
-          unzip -o DilChat_Android_Project.zip -d project
-          find project -name settings.gradle.kts -print
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build debug APK
-        run: |
-          PROJECT_DIR=$(find project -name settings.gradle.kts -print -quit | xargs dirname)
-          cd "$PROJECT_DIR"
-          gradle assembleDebug
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle assembleDebug --stacktrace --no-daemon
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: DilChat-APK
-          path: project/**/build/outputs/apk/debug/*.apk
+          name: DilChat-debug-apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
