@@ -6,12 +6,39 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show project files
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Extract Android project
         run: |
-          echo "Checking uploaded project files"
-          ls -la
-          find . -maxdepth 3 -type f | head -200
+          unzip -o DilChat_Android_Project.zip -d project
+          find project -name settings.gradle.kts -print
+
+      - name: Build debug APK
+        run: |
+          PROJECT_DIR=$(find project -name settings.gradle.kts -print -quit | xargs dirname)
+          cd "$PROJECT_DIR"
+          gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DilChat-APK
+          path: project/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
